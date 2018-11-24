@@ -17,7 +17,6 @@ The library is designed to take care of the details about sending colour command
 * A Raspberry Pi, running an up-to-date version of Raspbian (the library is tested with the 2018-11-13 version of Raspbian Stretch Lite).
 * If hardware SPI is used: SPI enabled and active (`raspi-config`, Interfacing Options, SPI, Enable); The SPI must be free and unused.
 * For software SPI (bit bang mode): Two free GPIO pins
-* The Adafruit_Python_GPIO library (https://github.com/adafruit/Adafruit_Python_GPIO) 
 * Python 3: Some people tried with Python 2 and reported it working, but I can't vouch for this myself. I used Python 3 for all development and test. Note that you need to install the Adafruit_Python_GPIO with Python 3! If you install with Python 2, then the library is invisible for Python 3 applications.
 
 Ideally, a 10$ Raspberry Pi Zero W is dedicated to the task of driving the LEDs. The connector to the LED stripe can be soldered directly to the correct ports on the board.
@@ -49,7 +48,7 @@ This is a Raspberry Pi Zero W with a Phat Beat amplifier on top. The amplifier's
 
 ![Raspberry Pi Zero W with Phat Beat](PhatBeat.jpg)
 
-Plugged into the USB port is a WLAN stick (nowadays I would rather use a Raspberry Pi Zero W, of course). This way I can reprogram the light show from my desk, even if the strips are installed outside as a Christmas light. Compare this to an Arduino/WS2812 based installation: To reprogram one has to take the Arduino inside, or a laptop outside.
+Plugged into the USB port is a WLAN stick: The picture is old, I now use a Raspberry Pi Zero W. This way I can reprogram the light show from my desk, even if the strips are installed outside as a Christmas light. Compare this to an Arduino/WS2812 based installation: To reprogram one has to take the Arduino inside, or a laptop outside.
 
 ## Video of the installation
 Videos can't be embedded yet, so head over to Youtube: [https://youtu.be/N0MK1z8W-1U]()
@@ -76,9 +75,7 @@ Then, update your installation (`sudo apt update && sudo apt -y upgrade`). This 
 - Activate SPI: `sudo raspi-config`; Go to "Interfacing Options"; Go to "SPI"; Enable SPI; Exit exit the tool and reboot  
 - Install the git client: `sudo apt install -y git`  
 - Prepare GIT: `git config --global user.name "John Doe" && git config --global user.email johndoe@example.com`  
-- Install Python 3 and some packages required by the Adafruit library: `sudo apt install -y python3-dev python3-pip python3-smbus python3-rpi.gpio`  
-- Fetch the Adafruit_Python_GPIO library: `cd /tmp && wget https://github.com/adafruit/Adafruit_Python_GPIO/archive/master.zip && unzip master.zip`  
-- Install the library: `cd Adafruit_Python_GPIO-master && sudo python3 ./setup.py install`  
+- Install Python 3 and some additional required packages: `sudo apt install -y python3-dev python3-pip python3-smbus python3-rpi.gpio`  
 - Create a development directory and change into it: `mkdir ~/Development && cd ~/Development`  
 - Get the APA102 Library and sample light programs: `git clone https://github.com/tinue/APA102_Pi.git`  
 - You might want to set the number of LEDs to match your strip: `cd APA102_Pi && nano runcolorcycle.py`; Update the number, Ctrl-X and "Yes" to save.  
@@ -91,6 +88,18 @@ If you want to use the APA102 library in your own projects, you will have to ins
  - Install the library (the dot at the end is necessary!) `sudo pip3 install .`
  
  To test, copy one of the test scripts away from the APA102 directory, e.g. directly to your home. If you can run the library from home without an error message, then the library is available system-wide.
+
+## SPI Library
+Since the first release, the SPI library has been changed twice. The project started with 'spidev', changed to the 'Adafruit Python GPIO Library', and changed again to use 'gpiozero'. Here is why:
+
+ - spidev is easy to use and works fine. It is still being maintained. The only drawback is that it does not support software SPI (bitbang). The library is available here: [https://github.com/doceme/py-spidev]().
+ - The Adafruit library was chosen because it **does** support Software SPI. Adafruit itself say "The library is currently in an early stage", but does not seem to be active in fixing this. The library has to be installed manually. It is available here: [https://github.com/adafruit/Adafruit\_Python\_GPIO]().
+ - gpiozero: The library does support both hardware and software SPI, it comes preinstalled on Raspbian, and it is actively being maintained. This is its homepage: [https://gpiozero.readthedocs.io/en/stable/index.html]().
+
+While searching for the "perfect" library, two more candidates popped up, but were never tried out:
+
+ - WiringPi: Available here: [http://wiringpi.com](). The library lacks an actively maintained Python wrapper.
+ - RPi.GPIO: Available here: [https://pypi.org/project/RPi.GPIO](). The library does not currently support SPI. It comes preinstalled with Raspbian.
 
 ## Release history
 - 2015-04-13: Initial version
@@ -107,3 +116,4 @@ If you want to use the APA102 library in your own projects, you will have to ins
 - 2018-01-19: Tiny release: Added a sample
 - 2018-05-25: No change in the driver; Slight restructuring of the templates and schemes to allow easier change of the SPI pins; Additional sample specific to the the Pimoroni Blinkt!
 - 2018-06-08: Make the library installable
+- 2018-xx-xx: Replace the SPI library
