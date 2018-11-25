@@ -1,5 +1,13 @@
 # APA102\_Pi
 
+## Caveat
+This branch is still "work in progress"! Currently, it does work with a number of limitations:
+
+* Right now the Python code runs on my Mac, not on the Raspberry Pi! It may or may not work on the Pi itself, I have not tested this yet.
+* The LED strip update is very slow. I have an issue open here: https://github.com/RPi-Distro/python-gpiozero/issues/650
+* Most of the documentation (README and inline comments) are not updated to reflect the changes
+
+ 
 ## Introduction
 APA102\_Pi is a pure Python library to drive APA102 type LED strands. It is supposed to work on a Raspberry Pi, and is not tested on any other platform.
 
@@ -74,8 +82,11 @@ Then, update your installation (`sudo apt update && sudo apt -y upgrade`). This 
 
 - Activate SPI: `sudo raspi-config`; Go to "Interfacing Options"; Go to "SPI"; Enable SPI; Exit exit the tool and reboot  
 - Install the git client: `sudo apt install -y git`  
-- Prepare GIT: `git config --global user.name "John Doe" && git config --global user.email johndoe@example.com`  
-- Install Python 3 and some additional required packages: `sudo apt install -y python3-dev python3-pip python3-smbus python3-rpi.gpio`  
+- Prepare GIT: `git config --global user.name "John Doe" && git config --global user.email johndoe@example.com`
+- Install libraries: `sudo apt install -y python3-gpiozero pigpio python3-pigpio`  
+- Install Python 3 and some additional required packages: `sudo apt install -y python3-dev python3-pip python3-smbus python3-rpi.gpio`
+- Start the daemon controlling access to the GPIO pins: `sudo systemctl start pigpiod`
+- To autostart the daemon after a reboot, enter `sudo systemctl enable pigpiod`  
 - Create a development directory and change into it: `mkdir ~/Development && cd ~/Development`  
 - Get the APA102 Library and sample light programs: `git clone https://github.com/tinue/APA102_Pi.git`  
 - You might want to set the number of LEDs to match your strip: `cd APA102_Pi && nano runcolorcycle.py`; Update the number, Ctrl-X and "Yes" to save.  
