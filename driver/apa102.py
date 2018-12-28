@@ -4,7 +4,6 @@
 import os
 os.environ['GPIOZERO_PIN_FACTORY'] = os.environ.get('GPIOZERO_PIN_FACTORY', 'mock')
 from gpiozero.pins.pigpio import PiGPIOFactory
-from gpiozero import SPIDevice
 from math import ceil
 
 RGB_MAP = { 'rgb': [3, 2, 1], 'rbg': [3, 1, 2], 'grb': [2, 3, 1],
@@ -56,19 +55,21 @@ class APA102:
       its color.
     - Send color information one by one, starting with the color for LED 1,
       then LED 2 etc.
-    - Finish off by cycling the clock line a few times to get all data
+    - Finish off by cycling the clock line num_led / 2 times to get all data
       to the very last LED on the strip
 
     The last step is necessary, because each LED delays forwarding the data
-    a bit. Imagine ten people in a row. When you yell the last color
-    information, i.e. the one for person ten, to the first person in
-    the line, then you are not finished yet. Person one has to turn around
-    and yell it to person 2, and so on. So it takes ten additional "dummy"
-    cycles until person ten knows the color. When you look closer,
-    you will see that not even person 9 knows its own color yet. This
-    information is still with person 2. Essentially the driver sends additional
-    zeroes to LED 1 as long as it takes for the last color frame to make it
-    down the line to the last LED.
+    a bit.
+    Say a bit is ready on the SPI data line. The sender communicates
+    this by toggling the clock line. The bit is read by the LED
+    and immediately forwarded to the output data line. When the clock goes
+    down again on the input side, the LED will toggle the clock up
+    on the output to tell the next LED that the bit is ready.
+
+    After one LED the clock is inverted, and after two LEDs it is in sync
+    again, but one cycle behind. Therefore, for every two LEDs, one bit
+    of delay gets accumulated. For 300 LEDs, 150 additional bits must be fed to
+    the input of LED one so that the data can reach the last LED.
     """
     # Constants
     MAX_BRIGHTNESS = 31 # Safeguard: Max. brightness that can be selected. 
@@ -88,53 +89,12 @@ class APA102:
         else:
             self.global_brightness = global_brightness
 
-        self.leds = [self.LED_START,0,0,0] * self.num_led # Pixel buffer
-        
-        factory = PiGPIOFactory(host='192.168.243.53')
-        #self.spi = SPIDevice(mosi_pin=mosi, clock_pin=sclk, pin_factory=factory)._spi
+        self.leds = [self.LED_START,0,0,0] * self.num_led #Pixel buffer
+        self.start_frame = [0] * 4 #32 bits of zeroes
+        self.end_frame = [0] * ((self.num_led + 15) // 8) #num_led/2 bits, rounded up to the next byte
+
+        factory = PiGPIOFactory(host='localhost')
         self.spi=factory.spi(mosi_pin=mosi, clock_pin=sclk)
-        self.spi._baud=8000000
-
-     
-    def clock_start_frame(self):
-        """Sends a start frame to the LED strip.
-
-        This method clocks out a start frame, telling the receiving LED
-        that it must update its own color now.
-        """
-        self.spi.transfer([0] * 4)  # Start frame, 32 zero bits
-
-
-    def clock_end_frame(self):
-        """Sends an end frame to the LED strip.
-
-        As explained above, dummy data must be sent after the last real colour
-        information so that all of the data can reach its destination down the line.
-        The delay is not as bad as with the human example above.
-        It is only 1/2 bit per LED. This is because the SPI clock line
-        needs to be inverted.
-
-        Say a bit is ready on the SPI data line. The sender communicates
-        this by toggling the clock line. The bit is read by the LED
-        and immediately forwarded to the output data line. When the clock goes
-        down again on the input side, the LED will toggle the clock up
-        on the output to tell the next LED that the bit is ready.
-
-        After one LED the clock is inverted, and after two LEDs it is in sync
-        again, but one cycle behind. Therefore, for every two LEDs, one bit
-        of delay gets accumulated. For 300 LEDs, 150 additional bits must be fed to
-        the input of LED one so that the data can reach the last LED.
-
-        Ultimately, we need to send additional numLEDs/2 arbitrary data bits,
-        in order to trigger numLEDs/2 additional clock changes. This driver
-        sends zeroes, which has the benefit of getting LED one partially or
-        fully ready for the next update to the strip. An optimized version
-        of the driver could omit the "clockStartFrame" method if enough zeroes have
-        been sent as part of "clockEndFrame".
-        """
-        # Round up num_led/2 bits (or num_led/16 bytes)
-        for _ in range((self.num_led + 15) // 16):
-            self.spi.transfer([0x00])
 
 
     def clear_strip(self):
@@ -202,11 +162,10 @@ class APA102:
 
         Todo: More than 1024 LEDs requires more than one xfer operation.
         """
-        self.clock_start_frame()
-        # xfer2 kills the list, unfortunately. So it must be copied first
-        # SPI takes up to 4096 Integers. So we are fine for up to 1024 LEDs.
-        self.spi.transfer(list(self.leds))
-        self.clock_end_frame()
+        #Assemble the data to be transferred via SPI
+        buffer = self.start_frame + list(self.leds) + self.end_frame
+        #Send the data down the line
+        self.spi.transfer(buffer)
 
 
     def cleanup(self):
