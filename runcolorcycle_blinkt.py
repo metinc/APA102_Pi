@@ -2,7 +2,7 @@
 """Sample script to run a few colour tests on a Pimoroni Blinkt!."""
 from colorschemes import colorschemes
 
-NUM_LED = 8
+NUM_LED = 11
 MOSI = 23 # Hardware SPI uses BCM 10 & 11. Change these values for bit bang mode
 SCLK = 24 # e.g. MOSI = 23, SCLK = 24 for Pimoroni Phat Beat or Blinkt!
 
